@@ -1,6 +1,7 @@
 # Box Video Downloader
 
-**Personal use**
+**Personal use**: only available in Letus
+
 Download the video on box shared inside Letus
 
 ## Requirement
@@ -15,6 +16,7 @@ git clone https://github.com/huhugiter/box-video-downloader.git
 ```
 
 Copy your `box.com` cookies from Chrome or something else write into `cookies` file
+
 **Important**: `box.com` cookies not Letus Cookies
 
 ```sh
