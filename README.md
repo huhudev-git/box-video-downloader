@@ -25,6 +25,8 @@ go run main.go -i <URL>
 
 Example URL: `https://tus.app.box.com/s/xxxxxxxxxxxxxxxxxxxxxxxx`
 
+temp video will be downloaded into temp/ folder, and complete video will output repo root folder, after finish videos inside temp folder will be deleted.
+
 ## How to copy cookies
 
 - Hit `F12` or Right-click page and Inspect to open the Developer Tools
