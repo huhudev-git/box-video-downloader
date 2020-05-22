@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
+	"path"
 	"regexp"
 
 	"github.com/huhugiter/box-video-downloader/models"
@@ -21,7 +23,7 @@ func main() {
 	p, err := parser.Parse()
 	if err != nil {
 		if p == nil {
-			fmt.Print(err)
+			panic(err)
 		}
 		return
 	}
@@ -35,7 +37,20 @@ func main() {
 	sharedName := matchs[1]
 
 	// cookies
-	cookies, err := ioutil.ReadFile("./cookies")
+	cookiesPath, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+
+	// exist
+	cookiesPath = path.Join(cookiesPath, "cookies")
+	_, err = os.Stat(cookiesPath)
+	if os.IsNotExist(err) {
+		panic(err)
+	}
+
+	// read
+	cookies, err := ioutil.ReadFile(cookiesPath)
 	if len(cookies) == 0 {
 		fmt.Println("Empty Cookies Provided")
 		return
@@ -52,6 +67,9 @@ func main() {
 	fileID, err := c.GetFileID(string(content))
 	if err != nil {
 		panic(err)
+	}
+	if len(fileID) == 0 {
+		panic("Expired Cookies")
 	}
 	fmt.Println("fileID:", fileID)
 

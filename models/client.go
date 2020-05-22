@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path"
 	"regexp"
 	"strconv"
 )
@@ -137,8 +138,23 @@ func (c *Client) GetManifest(readToken string, versionID string, fileID string, 
 
 // DownloadFile download file
 func (c *Client) DownloadFile(readToken string, versionID string, filename string, fileID string, sharedName string) error {
-	video := "./temp/" + filename + ".mp4"
-	audio := "./temp/" + filename + ".mp3"
+	p, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	p = path.Join(p, "temp")
+
+	_, err = os.Stat(p)
+	if os.IsNotExist(err) {
+		err := os.Mkdir(p, 0755)
+		if err != nil {
+			return err
+		}
+	}
+
+	video := path.Join(p, filename+".mp4")
+	audio := path.Join(p, filename+".mp3")
 
 	vf, err := os.Create(video)
 	if err != nil {
