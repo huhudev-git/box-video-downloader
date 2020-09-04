@@ -15,9 +15,9 @@ Download the video on box shared inside Letus
 git clone https://github.com/huhugiter/box-video-downloader.git
 ```
 
-Copy your `box.com` cookies from Chrome or something else write into `cookies` file
+Copy your `box.com` cookies from Chrome into `cookies` file
 
-**Important**: `box.com` cookies not Letus Cookies
+**Important**: `box.com` cookies not `letus.tus.ac.jp` cookies
 
 ```sh
 go run main.go -i <URL>
@@ -26,6 +26,16 @@ go run main.go -i <URL>
 Example URL: `https://tus.app.box.com/s/xxxxxxxxxxxxxxxxxxxxxxxx`
 
 temp videos will be downloaded into temp/ folder, and complete video will output repo root folder, after finished temp videos will be deleted.
+
+### FFmpeg
+
+If you perfer to use docker, use command below
+
+```sh
+go run main.go -i -d <URL>
+```
+
+it will use `jrottenberg/ffmpeg:4.0-scratch` to merge video and audio.
 
 ## How to copy cookies
 

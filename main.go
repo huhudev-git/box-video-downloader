@@ -14,7 +14,8 @@ import (
 
 // Options contains the flag options
 type Options struct {
-	URL string `short:"i" description:"box input url"`
+	URL    string `short:"i" description:"box input url"`
+	Docker bool   `short:"d" description:"ffmpeg use docker"`
 }
 
 func main() {
@@ -104,7 +105,8 @@ func main() {
 	//fmt.Println("manifest:", manifest)
 
 	// download
-	err = c.DownloadFile(tokens.Read, info.FileVersion.ID, info.Name, fileID, sharedName)
+	err = c.DownloadFile(tokens.Read, info.FileVersion.ID, info.Name, fileID, sharedName, options.Docker)
+	fmt.Println(err)
 	if err != nil {
 		panic(err)
 	}

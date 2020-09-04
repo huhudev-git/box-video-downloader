@@ -137,24 +137,24 @@ func (c *Client) GetManifest(readToken string, versionID string, fileID string, 
 }
 
 // DownloadFile download file
-func (c *Client) DownloadFile(readToken string, versionID string, filename string, fileID string, sharedName string) error {
+func (c *Client) DownloadFile(readToken string, versionID string, filename string, fileID string, sharedName string, docker bool) error {
 	p, err := os.Getwd()
 	if err != nil {
 		return err
 	}
 
-	p = path.Join(p, "temp")
+	tempPath := path.Join(p, "temp")
 
-	_, err = os.Stat(p)
+	_, err = os.Stat(tempPath)
 	if os.IsNotExist(err) {
-		err := os.Mkdir(p, 0755)
+		err := os.Mkdir(tempPath, 0755)
 		if err != nil {
 			return err
 		}
 	}
 
-	video := path.Join(p, filename+".mp4")
-	audio := path.Join(p, filename+".mp3")
+	video := path.Join(tempPath, filename+".mp4")
+	audio := path.Join(tempPath, filename+".mp3")
 
 	vf, err := os.Create(video)
 	if err != nil {
@@ -203,7 +203,25 @@ func (c *Client) DownloadFile(readToken string, versionID string, filename strin
 	fmt.Println()
 	fmt.Println("Merge video and audio...")
 
-	err = exec.Command("ffmpeg", "-i", video, "-i", audio, "-c:v", "copy", "-c:a", "aac", "-strict", "experimental", filename).Run()
+	if docker {
+		err = exec.Command(
+			"docker", "run", "--rm", "-v", p+":/tmp", "jrottenberg/ffmpeg:4.0-scratch",
+			"-y",
+			"-i", path.Join("/tmp/temp", filename+".mp4"),
+			"-i", path.Join("/tmp/temp", filename+".mp3"),
+			"-c:v", "copy", "-c:a", "aac", "-strict", "experimental",
+			path.Join("/tmp", filename),
+		).Run()
+	} else {
+		err = exec.Command(
+			"ffmpeg",
+			"-y",
+			"-i", video,
+			"-i", audio,
+			"-c:v", "copy", "-c:a", "aac", "-strict", "experimental",
+			filename,
+		).Run()
+	}
 	if err != nil {
 		return err
 	}
