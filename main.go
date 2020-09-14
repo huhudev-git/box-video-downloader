@@ -97,15 +97,23 @@ func main() {
 	fmt.Println("fileName:", info.Name)
 
 	// manifest
-	//manifest, err := c.GetManifest(tokens.Read, info.FileVersion.ID, fileID, sharedName)
-	//if err != nil {
-	//	fmt.Print(err)
-	//	return
-	//}
+	manifest, err := c.GetManifest(tokens.Read, info.FileVersion.ID, fileID, sharedName)
+	if err != nil {
+		fmt.Print(err)
+		return
+	}
+
+	// resolution
+	re := regexp.MustCompile(`initialization="video/(\d+?)/init.m4s"`)
+	resolutions := re.FindStringSubmatch(manifest)
+	if resolutions == nil {
+		fmt.Println("Get resolution failed")
+	}
+	resolution := resolutions[1]
 	//fmt.Println("manifest:", manifest)
 
 	// download
-	err = c.DownloadFile(tokens.Read, info.FileVersion.ID, info.Name, fileID, sharedName, options.Docker)
+	err = c.DownloadFile(tokens.Read, info.FileVersion.ID, info.Name, fileID, sharedName, resolution, options.Docker)
 	fmt.Println(err)
 	if err != nil {
 		panic(err)
