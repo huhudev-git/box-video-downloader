@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"strings"
 
 	"github.com/huhugiter/box-video-downloader/models"
 
@@ -56,7 +57,8 @@ func main() {
 		fmt.Println("Empty Cookies Provided")
 		return
 	}
-	c := models.NewClient(string(cookies))
+	cookiesStr := strings.Replace(string(cookies), "\n", "", -1)
+	c := models.NewClient(cookiesStr)
 
 	// content
 	content, err := c.GetContent(options.URL)
