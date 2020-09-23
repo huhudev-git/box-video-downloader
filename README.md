@@ -32,7 +32,7 @@ temp videos will be downloaded into temp/ folder, and complete video will output
 If you perfer to use docker, use command below
 
 ```sh
-go run main.go -i -d <URL>
+go run main.go -d -i <URL>
 ```
 
 it will use `jrottenberg/ffmpeg:4.0-scratch` to merge video and audio.
