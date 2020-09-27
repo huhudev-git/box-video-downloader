@@ -116,7 +116,6 @@ func main() {
 
 	// download
 	err = c.DownloadFile(tokens.Read, info.FileVersion.ID, info.Name, fileID, sharedName, resolution, options.Docker)
-	fmt.Println(err)
 	if err != nil {
 		panic(err)
 	}
