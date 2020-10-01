@@ -37,6 +37,14 @@ go run main.go -d -i <URL>
 
 it will use `jrottenberg/ffmpeg:4.0-scratch` to merge video and audio.
 
+### Multi Threads
+
+```sh
+go run main.go -t 20 -i <URL>
+```
+
+It will parallelly download parts by 20 threads.
+
 ## How to copy cookies
 
 - Hit `F12` or Right-click page and Inspect to open the Developer Tools

@@ -128,7 +128,15 @@ func (c *Client) GetInfo(writeToken string, fileID string, sharedName string) (*
 // GetManifest get manifest
 func (c *Client) GetManifest(readToken string, versionID string, fileID string, sharedName string) (string, error) {
 	client := &http.Client{}
-	req, _ := http.NewRequest("GET", "https://dl.boxcloud.com/api/2.0/internal_files/"+fileID+"/versions/"+versionID+"/representations/dash/content/manifest.mpd?access_token="+readToken+"&shared_link=https%3A%2F%2Ftus.app.box.com%2Fs%2F"+sharedName+"&box_client_name=box-content-preview&box_client_version=2.49.1", nil)
+	req, _ := http.NewRequest(
+		"GET",
+		"https://dl.boxcloud.com/api/2.0/internal_files/"+fileID+
+			"/versions/"+versionID+
+			"/representations/dash/content/manifest.mpd?access_token="+readToken+
+			"&shared_link=https%3A%2F%2Ftus.app.box.com%2Fs%2F"+sharedName+
+			"&box_client_name=box-content-preview&box_client_version=2.49.1",
+		nil,
+	)
 
 	bodyBytes, err := c.getContent(client, req)
 	if err != nil {
