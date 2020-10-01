@@ -11,7 +11,9 @@ import (
 	"os/exec"
 	"path"
 	"regexp"
+	"sort"
 	"strconv"
+	"sync"
 )
 
 // Client box client
@@ -144,6 +146,8 @@ func (c *Client) DownloadFile(
 	fileID string,
 	sharedName string,
 	resolution string,
+	chunkNum int,
+	threads int,
 	docker bool,
 ) error {
 	p, err := os.Getwd()
@@ -182,44 +186,82 @@ func (c *Client) DownloadFile(
 	counter := &WriteCounter{}
 	part := "init"
 
+	var videoChunks []Chunk
+	var audioChunks []Chunk
+	var waitGroutp = sync.WaitGroup{}
+
 	// TODO: find end part index
-	for i := 0; i < 100000; i++ {
-		if i != 0 {
-			part = strconv.Itoa(i)
-		}
+	for i := 0; i < chunkNum; i++ {
+		waitGroutp.Add(1)
+		go func(i int) {
+			if i != 0 {
+				part = strconv.Itoa(i)
+			}
 
-		vURL := "https://dl.boxcloud.com/api/2.0/internal_files/" + fileID +
-			"/versions/" + versionID +
-			"/representations/dash/content/video/" + resolution +
-			"/" + part +
-			".m4s?access_token=" + readToken +
-			"&shared_link=https%3A%2F%2Ftus.app.box.com%2Fs%2F" + sharedName +
-			"&box_client_name=box-content-preview&box_client_version=2.49.1"
-		aURL := "https://dl.boxcloud.com/api/2.0/internal_files/" + fileID +
-			"/versions/" + versionID +
-			"/representations/dash/content/audio/0/" + part +
-			".m4s?access_token=" + readToken +
-			"&shared_link=https%3A%2F%2Ftus.app.box.com%2Fs%2F" + sharedName +
-			"&box_client_name=box-content-preview&box_client_version=2.49.1"
+			vURL := "https://dl.boxcloud.com/api/2.0/internal_files/" + fileID +
+				"/versions/" + versionID +
+				"/representations/dash/content/video/" + resolution +
+				"/" + part +
+				".m4s?access_token=" + readToken +
+				"&shared_link=https%3A%2F%2Ftus.app.box.com%2Fs%2F" + sharedName +
+				"&box_client_name=box-content-preview&box_client_version=2.49.1"
+			aURL := "https://dl.boxcloud.com/api/2.0/internal_files/" + fileID +
+				"/versions/" + versionID +
+				"/representations/dash/content/audio/0/" + part +
+				".m4s?access_token=" + readToken +
+				"&shared_link=https%3A%2F%2Ftus.app.box.com%2Fs%2F" + sharedName +
+				"&box_client_name=box-content-preview&box_client_version=2.49.1"
 
-		// video
-		vok, err := c.downloadPart(client, vf, counter, vURL)
-		if err != nil {
-			return err
-		}
+			// video
+			vdata, err := c.downloadPart(client, counter, vURL)
+			if err != nil {
+				panic(err)
+			}
 
-		// audio
-		aok, err := c.downloadPart(client, af, counter, aURL)
-		if err != nil {
-			return err
-		}
+			// audio
+			adata, err := c.downloadPart(client, counter, aURL)
+			if err != nil {
+				panic(err)
+			}
 
-		if vok || aok {
-			break
+			if (vdata != nil) || (adata != nil) {
+				videoChunks = append(videoChunks, Chunk{Data: vdata, Index: i})
+				audioChunks = append(audioChunks, Chunk{Data: adata, Index: i})
+			}
+
+			waitGroutp.Done()
+		}(i)
+
+		if i%threads == 0 {
+			waitGroutp.Wait()
 		}
 	}
 
+	waitGroutp.Wait()
+
 	fmt.Println()
+	fmt.Println("Sort video and audio...")
+
+	sort.SliceStable(videoChunks, func(i, j int) bool {
+		return videoChunks[i].Index < videoChunks[j].Index
+	})
+	sort.SliceStable(audioChunks, func(i, j int) bool {
+		return audioChunks[i].Index < audioChunks[j].Index
+	})
+
+	fmt.Println("Write video and audio...")
+
+	for i := 0; i < len(videoChunks); i++ {
+		vbody := videoChunks[i].Data
+		abody := audioChunks[i].Data
+		if _, err = vf.Write(vbody); err != nil {
+			return err
+		}
+		if _, err = af.Write(abody); err != nil {
+			return err
+		}
+	}
+
 	fmt.Println("Merge video and audio...")
 
 	if docker {
@@ -245,7 +287,7 @@ func (c *Client) DownloadFile(
 		return err
 	}
 
-	fmt.Println("Merge video and audio finished")
+	fmt.Println("Merge video and audio finished !")
 
 	vf.Close()
 	if err = os.Remove(video); err != nil {
@@ -260,22 +302,20 @@ func (c *Client) DownloadFile(
 	return nil
 }
 
-func (c *Client) downloadPart(client *http.Client, f *os.File, counter *WriteCounter, url string) (bool, error) {
-	req, _ := http.NewRequest("GET", url, nil)
+func (c *Client) downloadPart(client *http.Client, counter *WriteCounter, url string) ([]byte, error) {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return true, nil
+		return nil, nil
 	}
 
-	body, err := ioutil.ReadAll(io.TeeReader(resp.Body, counter))
-	if _, err = f.Write(body); err != nil {
-		return false, err
-	}
-
-	return false, nil
+	return ioutil.ReadAll(io.TeeReader(resp.Body, counter))
 }
