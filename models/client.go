@@ -83,7 +83,7 @@ func (c *Client) GetTokens(fileID string, requestToken string, sharedName string
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Request-Token", requestToken)
 	req.Header.Set("X-Box-Client-Name", "enduserapp")
-	req.Header.Set("X-Box-Client-Version", "20.286.0")
+	req.Header.Set("X-Box-Client-Version", "20.356.0")
 	req.Header.Set("X-Box-EndUser-API", "sharedName="+sharedName)
 	req.Header.Set("X-Request-Token", requestToken)
 
@@ -134,7 +134,7 @@ func (c *Client) GetManifest(readToken string, versionID string, fileID string, 
 			"/versions/"+versionID+
 			"/representations/dash/content/manifest.mpd?access_token="+readToken+
 			"&shared_link=https%3A%2F%2Ftus.app.box.com%2Fs%2F"+sharedName+
-			"&box_client_name=box-content-preview&box_client_version=2.49.1",
+			"&box_client_name=box-content-preview&box_client_version=2.52.0",
 		nil,
 	)
 
@@ -198,7 +198,6 @@ func (c *Client) DownloadFile(
 	var audioChunks []Chunk
 	var waitGroutp = sync.WaitGroup{}
 
-	// TODO: find end part index
 	for i := 0; i < chunkNum; i++ {
 		waitGroutp.Add(1)
 		go func(i int) {
@@ -212,13 +211,13 @@ func (c *Client) DownloadFile(
 				"/" + part +
 				".m4s?access_token=" + readToken +
 				"&shared_link=https%3A%2F%2Ftus.app.box.com%2Fs%2F" + sharedName +
-				"&box_client_name=box-content-preview&box_client_version=2.49.1"
+				"&box_client_name=box-content-preview&box_client_version=2.52.0"
 			aURL := "https://dl.boxcloud.com/api/2.0/internal_files/" + fileID +
 				"/versions/" + versionID +
 				"/representations/dash/content/audio/0/" + part +
 				".m4s?access_token=" + readToken +
 				"&shared_link=https%3A%2F%2Ftus.app.box.com%2Fs%2F" + sharedName +
-				"&box_client_name=box-content-preview&box_client_version=2.49.1"
+				"&box_client_name=box-content-preview&box_client_version=2.52.0"
 
 			// video
 			vdata, err := c.downloadPart(client, counter, vURL)

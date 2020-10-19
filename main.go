@@ -143,7 +143,7 @@ func main() {
 		fileID,
 		sharedName,
 		resolution,
-		int(math.Ceil(duration/5.0))+2,
+		int(math.Ceil(duration/5.0))+5,
 		options.Threads,
 		options.Docker,
 	)
