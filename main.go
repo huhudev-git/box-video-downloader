@@ -133,7 +133,7 @@ func main() {
 		fmt.Println("Get resolution failed")
 	}
 	resolution := resolutions[1]
-	fmt.Println("Resolution:", resolution)
+	fmt.Println("Resolution:", resolution+"P")
 
 	// download
 	err = c.DownloadFile(

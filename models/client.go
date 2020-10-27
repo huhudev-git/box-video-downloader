@@ -16,6 +16,8 @@ import (
 	"sync"
 )
 
+var waitGroutp = sync.WaitGroup{}
+
 // Client box client
 type Client struct {
 	cookie string
@@ -83,7 +85,7 @@ func (c *Client) GetTokens(fileID string, requestToken string, sharedName string
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Request-Token", requestToken)
 	req.Header.Set("X-Box-Client-Name", "enduserapp")
-	req.Header.Set("X-Box-Client-Version", "20.356.0")
+	req.Header.Set("X-Box-Client-Version", "20.364.1")
 	req.Header.Set("X-Box-EndUser-API", "sharedName="+sharedName)
 	req.Header.Set("X-Request-Token", requestToken)
 
@@ -176,33 +178,22 @@ func (c *Client) DownloadFile(
 	video := path.Join(tempPath, filename+".mp4")
 	audio := path.Join(tempPath, filename+".mp3")
 
-	vf, err := os.Create(video)
-	if err != nil {
-		return err
-	}
-	// TODO: file already close
-	defer vf.Close()
-
-	af, err := os.Create(audio)
-	if err != nil {
-		return err
-	}
-	// TODO: file already close
-	defer af.Close()
-
 	client := &http.Client{}
 	counter := &WriteCounter{}
 	part := "init"
 
 	var videoChunks []Chunk
 	var audioChunks []Chunk
-	var waitGroutp = sync.WaitGroup{}
 
 	for i := 0; i < chunkNum; i++ {
 		waitGroutp.Add(1)
 		go func(i int) {
+			defer waitGroutp.Done()
+
 			if i != 0 {
 				part = strconv.Itoa(i)
+			} else {
+				part = "init"
 			}
 
 			vURL := "https://dl.boxcloud.com/api/2.0/internal_files/" + fileID +
@@ -231,12 +222,9 @@ func (c *Client) DownloadFile(
 				panic(err)
 			}
 
-			if (vdata != nil) || (adata != nil) {
-				videoChunks = append(videoChunks, Chunk{Data: vdata, Index: i})
-				audioChunks = append(audioChunks, Chunk{Data: adata, Index: i})
-			}
+			videoChunks = append(videoChunks, Chunk{Data: vdata, Index: i})
+			audioChunks = append(audioChunks, Chunk{Data: adata, Index: i})
 
-			waitGroutp.Done()
 		}(i)
 
 		if i%threads == 0 {
@@ -258,16 +246,26 @@ func (c *Client) DownloadFile(
 
 	fmt.Println("Write video and audio...")
 
+	vf, err := os.Create(video)
+	if err != nil {
+		return err
+	}
+	af, err := os.Create(audio)
+	if err != nil {
+		return err
+	}
+
 	for i := 0; i < len(videoChunks); i++ {
-		vbody := videoChunks[i].Data
-		abody := audioChunks[i].Data
-		if _, err = vf.Write(vbody); err != nil {
+		if _, err = vf.Write(videoChunks[i].Data); err != nil {
 			return err
 		}
-		if _, err = af.Write(abody); err != nil {
+		if _, err = af.Write(audioChunks[i].Data); err != nil {
 			return err
 		}
 	}
+
+	vf.Close()
+	af.Close()
 
 	fmt.Println("Merge video and audio...")
 
@@ -277,7 +275,7 @@ func (c *Client) DownloadFile(
 			"-y",
 			"-i", path.Join("/tmp/temp", filename+".mp4"),
 			"-i", path.Join("/tmp/temp", filename+".mp3"),
-			"-c:v", "copy", "-c:a", "aac", "-strict", "experimental",
+			"-c:v", "copy", "-c:a", "copy", "-strict", "experimental",
 			path.Join("/tmp", filename),
 		).Run()
 	} else {
@@ -286,7 +284,7 @@ func (c *Client) DownloadFile(
 			"-y",
 			"-i", video,
 			"-i", audio,
-			"-c:v", "copy", "-c:a", "aac", "-strict", "experimental",
+			"-c:v", "copy", "-c:a", "copy", "-strict", "experimental",
 			filename,
 		).Run()
 	}
@@ -296,12 +294,9 @@ func (c *Client) DownloadFile(
 
 	fmt.Println("Merge video and audio finished !")
 
-	vf.Close()
 	if err = os.Remove(video); err != nil {
 		return err
 	}
-
-	af.Close()
 	if err = os.Remove(audio); err != nil {
 		return err
 	}
