@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math"
+	"net/http"
+	"net/http/cookiejar"
+	"net/url"
 	"os"
 	"path"
 	"regexp"
@@ -11,15 +14,15 @@ import (
 	"strings"
 
 	"github.com/huhugiter/box-video-downloader/models"
+	"github.com/levigross/grequests"
 
 	flags "github.com/jessevdk/go-flags"
 )
 
 // Options contains the flag options
 type Options struct {
-	URL     string `short:"i" description:"box input url"`
-	Docker  bool   `short:"d" description:"ffmpeg use docker"`
-	Threads int    `short:"t" default:"10" description:"num of thread"`
+	URL    string `short:"i" description:"box input url"`
+	Docker bool   `short:"d" description:"ffmpeg use docker"`
 }
 
 func main() {
@@ -33,14 +36,6 @@ func main() {
 		}
 		return
 	}
-
-	// sharedName
-	sharedNameReg := regexp.MustCompile(`/s/(.+)`)
-	matchs := sharedNameReg.FindStringSubmatch(options.URL)
-	if matchs == nil {
-		return
-	}
-	sharedName := matchs[1]
 
 	// cookies
 	cookiesPath, err := os.Getwd()
@@ -64,7 +59,31 @@ func main() {
 		return
 	}
 	cookiesStr := strings.Replace(string(cookies), "\n", "", -1)
-	c := models.NewClient(cookiesStr)
+
+	cookieJar, _ := cookiejar.New(nil)
+	cs := []*http.Cookie{}
+	for _, c := range strings.Split(cookiesStr, ";") {
+		nv := strings.Split(c, "=")
+		cs = append(cs, &http.Cookie{
+			Name:     nv[0],
+			Value:    nv[1],
+			Path:     "/",
+			MaxAge:   0,
+			Domain:   "tus.app.box.com",
+			Secure:   true,
+			HttpOnly: false,
+		})
+	}
+	cookieURL, _ := url.Parse("https://tus.app.box.com/")
+	cookieJar.SetCookies(cookieURL, cs)
+
+	session := &grequests.Session{
+		HTTPClient: &http.Client{
+			Jar: cookieJar,
+		},
+		RequestOptions: &grequests.RequestOptions{},
+	}
+	c := models.NewClient(session)
 
 	// content
 	content, err := c.GetContent(options.URL)
@@ -74,9 +93,8 @@ func main() {
 	}
 
 	// fileID
-	fileID, err := c.GetFileID(string(content))
+	fileID, err := c.GetFileID(content)
 	if err != nil {
-		fmt.Println(err)
 		panic(err)
 	}
 	if len(fileID) == 0 {
@@ -85,12 +103,19 @@ func main() {
 	fmt.Println("FileID:", fileID)
 
 	// requestToken
-	requestToken, err := c.GetRequestToken(string(content))
+	requestToken, err := c.GetRequestToken(content)
 	if err != nil {
-		fmt.Println(err)
 		panic(err)
 	}
 	//fmt.Println("requestToken:", requestToken)
+
+	// sharedName
+	sharedNameReg := regexp.MustCompile(`/s/(.+)`)
+	matchs := sharedNameReg.FindStringSubmatch(options.URL)
+	if matchs == nil {
+		return
+	}
+	sharedName := matchs[1]
 
 	// tokens
 	tokens, err := c.GetTokens(fileID, requestToken, sharedName)
@@ -112,7 +137,6 @@ func main() {
 	// manifest
 	manifest, err := c.GetManifest(tokens.Read, info.FileVersion.ID, fileID, sharedName)
 	if err != nil {
-		fmt.Println(err)
 		panic(err)
 	}
 
@@ -131,6 +155,7 @@ func main() {
 	resolutions := resolutionReg.FindStringSubmatch(manifest)
 	if resolutions == nil {
 		fmt.Println("Get resolution failed")
+		return
 	}
 	resolution := resolutions[1]
 	fmt.Println("Resolution:", resolution+"P")
@@ -143,13 +168,12 @@ func main() {
 		fileID,
 		sharedName,
 		resolution,
-		int(math.Ceil(duration/5.0))+5,
-		options.Threads,
+		int(math.Ceil(duration/5.0))+1,
+		2, // lager than 1 may loss data, unknown reason, may be server limit
 		options.Docker,
 	)
 
 	if err != nil {
-		fmt.Println(err)
 		panic(err)
 	}
 }
