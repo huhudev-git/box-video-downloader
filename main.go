@@ -85,96 +85,99 @@ func main() {
 	}
 	c := models.NewClient(session)
 
-	// content
-	content, err := c.GetContent(options.URL)
-	if err != nil {
-		fmt.Println(err)
-		panic(err)
-	}
+	urls := strings.Split(options.URL, ",")
+	for _, url := range urls {
+		// content
+		content, err := c.GetContent(url)
+		if err != nil {
+			fmt.Println(err)
+			panic(err)
+		}
 
-	// fileID
-	fileID, err := c.GetFileID(content)
-	if err != nil {
-		panic(err)
-	}
-	if len(fileID) == 0 {
-		panic("Expired Cookies")
-	}
-	fmt.Println("FileID:", fileID)
+		// fileID
+		fileID, err := c.GetFileID(content)
+		if err != nil {
+			panic(err)
+		}
+		if len(fileID) == 0 {
+			panic("Expired Cookies")
+		}
+		fmt.Println("FileID:", fileID)
 
-	// requestToken
-	requestToken, err := c.GetRequestToken(content)
-	if err != nil {
-		panic(err)
-	}
-	//fmt.Println("requestToken:", requestToken)
+		// requestToken
+		requestToken, err := c.GetRequestToken(content)
+		if err != nil {
+			panic(err)
+		}
+		//fmt.Println("requestToken:", requestToken)
 
-	// sharedName
-	sharedNameReg := regexp.MustCompile(`/s/(.+)`)
-	matchs := sharedNameReg.FindStringSubmatch(options.URL)
-	if matchs == nil {
-		return
-	}
-	sharedName := matchs[1]
+		// sharedName
+		sharedNameReg := regexp.MustCompile(`/s/(.+)`)
+		matchs := sharedNameReg.FindStringSubmatch(url)
+		if matchs == nil {
+			return
+		}
+		sharedName := matchs[1]
 
-	// tokens
-	tokens, err := c.GetTokens(fileID, requestToken, sharedName)
-	if tokens != nil && err != nil {
-		fmt.Println(err)
-		panic(err)
-	}
-	//fmt.Println("tokens:", tokens)
+		// tokens
+		tokens, err := c.GetTokens(fileID, requestToken, sharedName)
+		if tokens != nil && err != nil {
+			fmt.Println(err)
+			panic(err)
+		}
+		//fmt.Println("tokens:", tokens)
 
-	// info
-	info, err := c.GetInfo(tokens.Write, fileID, sharedName)
-	if err != nil {
-		fmt.Println(err)
-		panic(err)
-	}
-	//fmt.Println("info:", info)
-	fmt.Println("Filename:", info.Name)
+		// info
+		info, err := c.GetInfo(tokens.Write, fileID, sharedName)
+		if err != nil {
+			fmt.Println(err)
+			panic(err)
+		}
+		//fmt.Println("info:", info)
+		fmt.Println("Filename:", info.Name)
 
-	// manifest
-	manifest, err := c.GetManifest(tokens.Read, info.FileVersion.ID, fileID, sharedName)
-	if err != nil {
-		panic(err)
-	}
+		// manifest
+		manifest, err := c.GetManifest(tokens.Read, info.FileVersion.ID, fileID, sharedName)
+		if err != nil {
+			panic(err)
+		}
 
-	// mediaPresentationDuration
-	mediaPresentationDurationReg := regexp.MustCompile(`mediaPresentationDuration="(PT.+?)"`)
-	matchs = mediaPresentationDurationReg.FindStringSubmatch(manifest)
-	if matchs == nil {
-		return
-	}
-	mediaPresentationDuration := matchs[1]
-	duration := convert2second(mediaPresentationDuration)
-	fmt.Println("Duration:", duration)
+		// mediaPresentationDuration
+		mediaPresentationDurationReg := regexp.MustCompile(`mediaPresentationDuration="(PT.+?)"`)
+		matchs = mediaPresentationDurationReg.FindStringSubmatch(manifest)
+		if matchs == nil {
+			return
+		}
+		mediaPresentationDuration := matchs[1]
+		duration := convert2second(mediaPresentationDuration)
+		fmt.Println("Duration:", duration)
 
-	// resolution
-	resolutionReg := regexp.MustCompile(`initialization="video/(\d+?)/init.m4s"`)
-	resolutions := resolutionReg.FindStringSubmatch(manifest)
-	if resolutions == nil {
-		fmt.Println("Get resolution failed")
-		return
-	}
-	resolution := resolutions[1]
-	fmt.Println("Resolution:", resolution+"P")
+		// resolution
+		resolutionReg := regexp.MustCompile(`initialization="video/(\d+?)/init.m4s"`)
+		resolutions := resolutionReg.FindStringSubmatch(manifest)
+		if resolutions == nil {
+			fmt.Println("Get resolution failed")
+			return
+		}
+		resolution := resolutions[1]
+		fmt.Println("Resolution:", resolution+"P")
 
-	// download
-	err = c.DownloadFile(
-		tokens.Read,
-		info.FileVersion.ID,
-		info.Name,
-		fileID,
-		sharedName,
-		resolution,
-		int(math.Ceil(duration/5.0))+1,
-		1, // larger than 1 may loss data, unknown reason, may be server limit
-		options.Docker,
-	)
+		// download
+		err = c.DownloadFile(
+			tokens.Read,
+			info.FileVersion.ID,
+			info.Name,
+			fileID,
+			sharedName,
+			resolution,
+			int(math.Ceil(duration/5.0))+5,
+			1, // larger than 1 may loss data, unknown reason, may be server limit
+			options.Docker,
+		)
 
-	if err != nil {
-		panic(err)
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 

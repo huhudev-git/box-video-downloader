@@ -24,8 +24,11 @@ go run main.go -i <URL>
 ```
 
 Example URL: `https://tus.app.box.com/s/xxxxxxxxxxxxxxxxxxxxxxxx`
+Use `,` to split url, Example: `-i <URL>,<URL>,<URL>`
 
 temp videos will be downloaded into temp/ folder, and complete video will output repo root folder, after finished temp videos will be deleted.
+
+> Not download multi videos at the same time, the box.com has limit that will loss data
 
 ### FFmpeg
 
