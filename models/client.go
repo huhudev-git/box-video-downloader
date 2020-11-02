@@ -27,11 +27,11 @@ func NewClient(session *grequests.Session) *Client {
 	c := &Client{
 		session: session,
 	}
-	// c.login()
 	return c
 }
 
-func (c *Client) login() {
+// Login -
+func (c *Client) Login() {
 	session := grequests.NewSession(&grequests.RequestOptions{
 		UserAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.111 Safari/537.36 Edg/86.0.622.51",
 		Headers: map[string]string{
@@ -43,7 +43,12 @@ func (c *Client) login() {
 		},
 	})
 
-	resp, err := session.Get("https://account.box.com/login", nil)
+	resp, err := session.Get("https://tus.account.box.com/login", nil)
+	if err != nil {
+		panic(err)
+	}
+
+	resp, err = session.Get("https://account.box.com/login", nil)
 	if err != nil {
 		panic(err)
 	}
@@ -58,7 +63,7 @@ func (c *Client) login() {
 		"https://account.box.com/login?redirect_url=%2F",
 		&grequests.RequestOptions{
 			Data: map[string]string{
-				"login":             "",
+				"login":             "@ed.tus.ac.jp",
 				"_pw_sql":           "",
 				"dummy-password":    "",
 				"request_token":     requestToken,
@@ -84,11 +89,19 @@ func (c *Client) login() {
 		"https://account.box.com/login/credentials?redirect_url=%2F",
 		&grequests.RequestOptions{
 			Data: map[string]string{
-				"login":         "",
-				"_pw_sql":       "",
+				"login":         "@ed.tus.ac.jp",
 				"password":      "",
+				"_pw_sql":       "",
 				"request_token": requestToken,
 				"redirect_url":  "/",
+			},
+			Headers: map[string]string{
+				"Sec-Fetch-Dest":            "document",
+				"Sec-Fetch-Mode":            "navigate",
+				"Sec-Fetch-Site":            "same-origin",
+				"Sec-Fetch-User":            "?1",
+				"Upgrade-Insecure-Requests": "1",
+				"Referer":                   "https://account.box.com/login?redirect_url=/",
 			},
 		},
 	)
@@ -96,7 +109,8 @@ func (c *Client) login() {
 		panic(err)
 	}
 
-	fmt.Println(resp.String())
+	fmt.Println(resp.Header)
+	// fmt.Println(resp.String())
 
 	// req, err = http.NewRequest("GET", resp.Header["Location"][0], strings.NewReader(args.Encode()))
 	// req.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.111 Safari/537.36 Edg/86.0.622.51")

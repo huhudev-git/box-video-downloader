@@ -169,7 +169,7 @@ func main() {
 		sharedName,
 		resolution,
 		int(math.Ceil(duration/5.0))+1,
-		2, // lager than 1 may loss data, unknown reason, may be server limit
+		1, // larger than 1 may loss data, unknown reason, may be server limit
 		options.Docker,
 	)
 
